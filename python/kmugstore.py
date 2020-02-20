@@ -1,29 +1,27 @@
-import pymysql
+import db
 import requests
 import time
 from bs4 import BeautifulSoup
 
-conn = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='1234',
-    db='crawler',
-    charset='utf8'
-)
+sql = db.mysql('localhost', 'root', '1234', 'crawler')
 
-curs = conn.cursor()
-
-query = "select url from kmugstore_url order by idx"
-curs.execute(query)
-
-rows = curs.fetchall()
+query = "select url , category from kmugstore_url order by idx asc"
+rows = sql.get_results(query)
 
 BASE_URL = "https://shop.kmug.co.kr/shop"
 
 for column in rows:
-    for url in column:
-        result = requests.get(url)
-        soup = BeautifulSoup(result.text, "html.parser")
+    url = column[0]
+    category = column[1]
+    result = requests.get(url)
+    soup = BeautifulSoup(result.text, "html.parser")
+
+    pages = soup.find_all("a", {"class": "navi"})
+    for page in range(len(pages) + 1):
+        page = page + 1
+        if page != 1:
+            result = requests.get(f"{url}&page={page}")
+            soup = BeautifulSoup(result.text, "html.parser")
         tables = soup.find_all(
             "td", {"style": "border-right:0px solid #e1e1e1;"})
         for table in tables:
@@ -32,13 +30,16 @@ for column in rows:
             sub_soup = BeautifulSoup(sub_result.text, "html.parser")
             title = sub_soup.find("div", {
                 "style": "font-size:17px; font-weight:bold; line-height:48px; border-bottom:solid 2px #e0e0e0;"}).get_text(strip=True).replace("'", "\\'")
-            part_number_idx = title.find("/A")
-            if not part_number_idx == -1:
-                part_number_idx_start = part_number_idx - 7
-                part_number_idx_end = part_number_idx + 2
-                part_number = title[part_number_idx_start:part_number_idx_end]
+            keyword_idx = title.find("/A")
+            if not keyword_idx == -1:
+                keyword_idx_start = keyword_idx - 7
+                keyword_idx_end = keyword_idx + 2
+                keyword = title[keyword_idx_start:keyword_idx_end]
             else:
-                part_number = None
+                if category == "iPhone":
+                    keyword = title.split("-")[-1].strip()
+                else:
+                    continue
             price = int(sub_soup.find("span", {"id": "price"}).get_text(
                 strip=True).replace(",", ""))
             fee = sub_soup.find(
@@ -60,16 +61,14 @@ for column in rows:
 
             insert_query = f"""
                             INSERT INTO kmugstore_data
-                            SET productname = '{title}',
-                             partnumber = '{part_number}',
-                             price = {price},
-                             fee = {fee},
-                             imgurl = '{image_url}',
-                             crawling_time = '{now}'
-                             """
+                            SET productName = '{title}',
+                            keyword = '{keyword}',
+                            price = {price},
+                            fee = {fee},
+                            imgurl = '{image_url}',
+                            crawlingTime = '{now}',
+                            category = '{category}'
+                            """
+            sql.query(insert_query)
 
-            curs.execute(insert_query)
-            conn.commit()
-
-
-conn.close()
+sql.close()
