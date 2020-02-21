@@ -3,72 +3,74 @@ import requests
 import time
 from bs4 import BeautifulSoup
 
-sql = db.mysql('localhost', 'root', '1234', 'crawler')
 
-query = "select url , category from kmugstore_url order by idx asc"
-rows = sql.get_results(query)
+def kmugstore_crawling():
+    sql = db.mysql('localhost', 'root', '1234', 'crawler')
 
-BASE_URL = "https://shop.kmug.co.kr/shop"
+    query = "select url , category from kmugstore_url order by idx asc"
+    rows = sql.get_results(query)
 
-for column in rows:
-    url = column[0]
-    category = column[1]
-    result = requests.get(url)
-    soup = BeautifulSoup(result.text, "html.parser")
+    BASE_URL = "https://shop.kmug.co.kr/shop"
 
-    pages = soup.find_all("a", {"class": "navi"})
-    for page in range(len(pages) + 1):
-        page = page + 1
-        if page != 1:
-            result = requests.get(f"{url}&page={page}")
-            soup = BeautifulSoup(result.text, "html.parser")
-        tables = soup.find_all(
-            "td", {"style": "border-right:0px solid #e1e1e1;"})
-        for table in tables:
-            sub_link = table.find("a")["href"].replace("..", "")
-            sub_result = requests.get(f"{BASE_URL}{sub_link}")
-            sub_soup = BeautifulSoup(sub_result.text, "html.parser")
-            title = sub_soup.find("div", {
-                "style": "font-size:17px; font-weight:bold; line-height:48px; border-bottom:solid 2px #e0e0e0;"}).get_text(strip=True).replace("'", "\\'")
-            keyword_idx = title.find("/A")
-            if not keyword_idx == -1:
-                keyword_idx_start = keyword_idx - 7
-                keyword_idx_end = keyword_idx + 2
-                keyword = title[keyword_idx_start:keyword_idx_end]
-            else:
-                if category == "iPhone":
-                    keyword = title.split("-")[-1].strip()
+    for column in rows:
+        url = column[0]
+        category = column[1]
+        result = requests.get(url)
+        soup = BeautifulSoup(result.text, "html.parser")
+
+        pages = soup.find_all("a", {"class": "navi"})
+        for page in range(len(pages) + 1):
+            page = page + 1
+            if page != 1:
+                result = requests.get(f"{url}&page={page}")
+                soup = BeautifulSoup(result.text, "html.parser")
+            tables = soup.find_all(
+                "td", {"style": "border-right:0px solid #e1e1e1;"})
+            for table in tables:
+                sub_link = table.find("a")["href"].replace("..", "")
+                sub_result = requests.get(f"{BASE_URL}{sub_link}")
+                sub_soup = BeautifulSoup(sub_result.text, "html.parser")
+                title = sub_soup.find("div", {
+                    "style": "font-size:17px; font-weight:bold; line-height:48px; border-bottom:solid 2px #e0e0e0;"}).get_text(strip=True).replace("'", "\\'")
+                keyword_idx = title.find("/A")
+                if not keyword_idx == -1:
+                    keyword_idx_start = keyword_idx - 7
+                    keyword_idx_end = keyword_idx + 2
+                    keyword = title[keyword_idx_start:keyword_idx_end]
                 else:
-                    continue
-            price = int(sub_soup.find("span", {"id": "price"}).get_text(
-                strip=True).replace(",", ""))
-            fee = sub_soup.find(
-                "td", {"style": "font-size:15px; font-weight:normal;"}).get_text(strip=True)
+                    if category == "iPhone":
+                        keyword = title.split("-")[-1].strip()
+                    else:
+                        continue
+                price = int(sub_soup.find("span", {"id": "price"}).get_text(
+                    strip=True).replace(",", ""))
+                fee = sub_soup.find(
+                    "td", {"style": "font-size:15px; font-weight:normal;"}).get_text(strip=True)
 
-            if fee == "무료배송":
-                fee = 0
-            else:
-                fee = int(fee)
-            image_url = sub_soup.find("img", {"id": "objImg"})["src"]
-            if image_url.find("../") != -1:
-                replace_image_url = image_url.replace("..", "")
-                image_url = f"{BASE_URL}{replace_image_url}"
-            image_url = image_url.replace(
-                "http://", "https://").replace("'", "\\'")
+                if fee == "무료배송":
+                    fee = 0
+                else:
+                    fee = int(fee)
+                image_url = sub_soup.find("img", {"id": "objImg"})["src"]
+                if image_url.find("../") != -1:
+                    replace_image_url = image_url.replace("..", "")
+                    image_url = f"{BASE_URL}{replace_image_url}"
+                image_url = image_url.replace(
+                    "http://", "https://").replace("'", "\\'")
 
-            now = time.strftime("%Y-%m-%d %H:%M:%S",
-                                time.localtime(time.time()))
+                now = time.strftime("%Y-%m-%d %H:%M:%S",
+                                    time.localtime(time.time()))
 
-            insert_query = f"""
-                            INSERT INTO kmugstore_data
-                            SET productName = '{title}',
-                            keyword = '{keyword}',
-                            price = {price},
-                            fee = {fee},
-                            imgurl = '{image_url}',
-                            crawlingTime = '{now}',
-                            category = '{category}'
-                            """
-            sql.query(insert_query)
+                insert_query = f"""
+                                INSERT INTO kmugstore_data
+                                SET productName = '{title}',
+                                keyword = '{keyword}',
+                                price = {price},
+                                fee = {fee},
+                                imgurl = '{image_url}',
+                                crawlingTime = '{now}',
+                                category = '{category}'
+                                """
+                sql.query(insert_query)
 
-sql.close()
+    sql.close()

@@ -4,15 +4,16 @@ import chrome_driver
 from bs4 import BeautifulSoup
 
 
-def wemakeprice_crawling():
+def auction_crawling():
     driver = chrome_driver.get_driver()
 
-    BASE_URL = "https://search.wemakeprice.com/search"
-    SORT = "sort=cheap"
-    crawling_site = "위메프"
+    BASE_URL = "http://browse.auction.co.kr/search"
+    SORT = "s=4"
+    crawling_site = "옥션"
 
     sql = db.mysql('localhost', 'root', '1234', 'crawler')
     query = "select distinct keyword from kmugstore_data order by idx asc"
+
     rows = sql.get_results(query)
     for column in rows:
         keyword = column[0]
@@ -23,44 +24,46 @@ def wemakeprice_crawling():
         result = driver.page_source
         soup = BeautifulSoup(result, 'html.parser')
 
-        pages = soup.find("div", {"class": "paging_comm"}
-                          ).find_all("a", {"class": "link_page"})
+        pages = soup.find("div", {"class": "component--pagination"}
+                          ).find_all("a", {"class": "link--page"})
 
         for page in range(len(pages) + 1):
             page = page + 1
             if page != 1:
-                driver.get(f"{url}&page={page}")
+                driver.get(f"{url}&p={page}")
                 time.sleep(2)
                 result = driver.page_source
                 soup = BeautifulSoup(result, "html.parser")
-            box = soup.find("div", {"class": "search_box_imagedeal"})
-            links = box.find_all("a")
-            for link in links:
-                sub_url = f"https:{link['href']}"
 
-                driver.get(sub_url)
+            box = soup.find("div", {"id": "section--inner_content_body_container"}).find(
+                "div", {"module-design-id": "17"})
+            components = box.find_all("div", {"class": "component"})
+            for component in components:
 
-                sub_result = driver.page_source
-                sub_soup = BeautifulSoup(sub_result, 'html.parser')
-                price_div = sub_soup.find("strong", {"class": "sale_price"})
-                if price_div is None:
-                    continue
-                price = int(price_div.find(
-                    "em", {"class": "num"}).get_text(strip=True).replace(",", ""))
-                if price < 190000:
-                    continue
-                title = sub_soup.find(
-                    "h3", {"class": "deal_tit"}).get_text(strip=True)
-                saler = None
-                fee = sub_soup.find("dl", {"class": "shipping"}).find("em")
-
-                if fee is None:
+                fee = soup.find("ul", {"class": "list--addinfo"}).find(
+                    "span", {"class": "text--addinfo"}).get_text(strip=True).split(" ")[-1].replace("원", "").replace(",", "")
+                if fee == "무료배송":
                     fee = 0
-                elif type(fee.get_text(strip=True)) == str:
+                elif type(fee) == str:
                     fee = 0
                 else:
-                    fee = int(fee.get_text(strip=True).replace(
-                        ",", "").replace("원", ""))
+                    fee = int(fee)
+
+                sub_url = component.find("div", {"class": "section--itemcard"}).find(
+                    "div", {"class": "section--itemcard_img"}).find("a")["href"]
+                driver.get(sub_url)
+                sub_result = driver.page_source
+                sub_soup = BeautifulSoup(sub_result, 'html.parser')
+                price = int(sub_soup.find(
+                    "strong", {"class": "price_real"}).get_text(strip=True).replace(",", "")[:-1])
+                if price < 300000:
+                    continue
+                title = sub_soup.find(
+                    "span", {"class": "text__item-title"}).get_text(strip=True)
+                if '구매불가' in title:
+                    continue
+                saler = sub_soup.find(
+                    "strong", {"class": "shop-title"}).get_text(strip=True)
                 product_url = sub_url
                 now = time.strftime("%Y-%m-%d %H:%M:%S",
                                     time.localtime(time.time()))
@@ -80,3 +83,6 @@ def wemakeprice_crawling():
     sql.close()
     driver.close()
     driver.quit()
+
+
+auction_crawling()
