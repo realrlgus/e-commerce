@@ -1,7 +1,11 @@
-import db
 import time
 import chrome_driver
+import requests
+import json
 from bs4 import BeautifulSoup
+
+API_URL = "http://localhost:3001/api"
+headers = {'Content-Type': 'application/json; charset=utf-8'}
 
 
 def wemakeprice_crawling():
@@ -10,13 +14,11 @@ def wemakeprice_crawling():
     BASE_URL = "https://search.wemakeprice.com/search"
     SORT = "sort=cheap"
     crawling_site = "위메프"
+    response = requests.get(url=f"{API_URL}/keyword")
 
-    sql = db.mysql('localhost', 'root', '1234', 'crawler')
-    query = "select distinct keyword from kmugstore_data order by idx asc"
-    rows = sql.get_results(query)
+    rows = response.json()
     for column in rows:
-        keyword = column[0]
-
+        keyword = column['keyword']
         url = f"{BASE_URL}?keyword={keyword}&{SORT}"
         driver.get(url)
         time.sleep(2)
@@ -51,7 +53,7 @@ def wemakeprice_crawling():
                     continue
                 title = sub_soup.find(
                     "h3", {"class": "deal_tit"}).get_text(strip=True)
-                saler = None
+                saler = "null"
                 fee = sub_soup.find("dl", {"class": "shipping"}).find("em")
 
                 if fee is None:
@@ -65,18 +67,14 @@ def wemakeprice_crawling():
                 now = time.strftime("%Y-%m-%d %H:%M:%S",
                                     time.localtime(time.time()))
 
-                insert_query = f"""
-                                INSERT INTO ecommerce_data
-                                SET productName = '{title}',
-                                keyword = '{keyword}',
-                                price = {price},
-                                fee = {fee},
-                                productUrl = '{product_url}',
-                                crawlingTime = '{now}',
-                                crawlingSite = '{crawling_site}',
-                                saler = '{saler}'
-                                """
-                sql.query(insert_query)
-    sql.close()
+                params = {"productName": title, "keyword": keyword, "price": price, "fee": fee,
+                          "productUrl": product_url, "crawlingTime": now, "crawlingSite": crawling_site, "saler": saler}
+
+                requests.post(url=f"{API_URL}/items", data=json.dumps(
+                    params), headers=headers)
+
     driver.close()
     driver.quit()
+
+
+wemakeprice_crawling()
