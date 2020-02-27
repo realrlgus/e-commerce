@@ -1,7 +1,11 @@
-import db
 import time
 import chrome_driver
+import requests
+import json
 from bs4 import BeautifulSoup
+
+API_URL = "http://localhost:3001/api"
+headers = {'Content-Type': 'application/json; charset=utf-8'}
 
 
 def evelenst_crawling():
@@ -11,12 +15,11 @@ def evelenst_crawling():
     SORT = "ab=A#sortCd%%L"
     crawling_site = "11번가"
 
-    sql = db.mysql('localhost', 'root', '1234', 'crawler')
-    query = "select distinct keyword from kmugstore_data order by idx asc"
+    response = requests.get(url=f"{API_URL}/keyword")
 
-    rows = sql.get_results(query)
+    rows = response.json()
     for column in rows:
-        keyword = column[0]
+        keyword = column['keyword']
 
         url = f"{BASE_URL}?kwd={keyword}&{SORT}"
         driver.get(url)
@@ -67,18 +70,10 @@ def evelenst_crawling():
                 now = time.strftime("%Y-%m-%d %H:%M:%S",
                                     time.localtime(time.time()))
 
-                insert_query = f"""
-                                INSERT INTO ecommerce_data
-                                SET productName = '{title}',
-                                keyword = '{keyword}',
-                                price = {price},
-                                fee = {fee},
-                                productUrl = '{product_url}',
-                                crawlingTime = '{now}',
-                                crawlingSite = '{crawling_site}',
-                                saler = '{saler}'
-                                """
-                sql.query(insert_query)
-    sql.close()
+                params = {"productName": title, "keyword": keyword, "price": price, "fee": fee,
+                          "productUrl": product_url, "crawlingTime": now, "crawlingSite": crawling_site, "saler": saler}
+
+                requests.post(url=f"{API_URL}/items", data=json.dumps(
+                    params), headers=headers)
     driver.close()
     driver.quit()

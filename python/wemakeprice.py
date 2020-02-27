@@ -25,8 +25,12 @@ def wemakeprice_crawling():
         result = driver.page_source
         soup = BeautifulSoup(result, 'html.parser')
 
-        pages = soup.find("div", {"class": "paging_comm"}
-                          ).find_all("a", {"class": "link_page"})
+        is_exists = soup.find("span", {"class": "t_block"})
+
+        if is_exists is not None:
+            continue
+        pages = soup.find("div", {"class": "paging_comm"}).find_all(
+            "a", {"class": "link_page"})
 
         for page in range(len(pages) + 1):
             page = page + 1
@@ -48,7 +52,7 @@ def wemakeprice_crawling():
                 if price_div is None:
                     continue
                 price = int(price_div.find(
-                    "em", {"class": "num"}).get_text(strip=True).replace(",", ""))
+                    "em", {"class": "num"}).get_text(strip=True).replace(",", "").replace("원", ""))
                 if price < 190000:
                     continue
                 title = sub_soup.find(
@@ -75,6 +79,3 @@ def wemakeprice_crawling():
 
     driver.close()
     driver.quit()
-
-
-wemakeprice_crawling()
