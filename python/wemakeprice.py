@@ -29,10 +29,16 @@ def wemakeprice_crawling():
 
         if is_exists is not None:
             continue
-        pages = soup.find("div", {"class": "paging_comm"}).find_all(
-            "a", {"class": "link_page"})
-
-        for page in range(len(pages) + 1):
+        last_pages = soup.find("a", {"class": "btn_lst"})["data-page"]
+        if last_pages is None:
+            pages = soup.find("div", {"class": "paging_comm"}).find_all(
+                "a", {"class": "link_page"})
+            pages = len(pages)
+            for_page = range(len(pages) + 1)
+        else:
+            pages = int(last_pages)
+            for_page = range(pages)
+        for page in for_page:
             page = page + 1
             if page != 1:
                 driver.get(f"{url}&page={page}")

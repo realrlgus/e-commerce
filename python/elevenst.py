@@ -20,7 +20,8 @@ def evelenst_crawling():
     rows = response.json()
     for column in rows:
         keyword = column['keyword']
-
+        if keyword == 'iPhone 11 Pro 64GB':
+            break
         url = f"{BASE_URL}?kwd={keyword}&{SORT}"
         driver.get(url)
         time.sleep(2)
