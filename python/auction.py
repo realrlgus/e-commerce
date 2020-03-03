@@ -27,6 +27,10 @@ def auction_crawling():
         result = driver.page_source
         soup = BeautifulSoup(result, 'html.parser')
 
+        no_results = soup.find("div", {"class": "component--no_result"})
+        if no_results:
+            continue
+
         pages = soup.find("div", {"class": "component--pagination"}
                           ).find_all("a", {"class": "link--page"})
 

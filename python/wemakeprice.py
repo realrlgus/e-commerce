@@ -29,14 +29,14 @@ def wemakeprice_crawling():
 
         if is_exists is not None:
             continue
-        last_pages = soup.find("a", {"class": "btn_lst"})["data-page"]
+        last_pages = soup.find("a", {"class": "btn_lst"})
         if last_pages is None:
             pages = soup.find("div", {"class": "paging_comm"}).find_all(
                 "a", {"class": "link_page"})
-            pages = len(pages)
-            for_page = range(len(pages) + 1)
+            pages = len(pages) + 1
+            for_page = range(0, pages)
         else:
-            pages = int(last_pages)
+            pages = int(last_pages["data-page"])
             for_page = range(pages)
         for page in for_page:
             page = page + 1
@@ -45,7 +45,8 @@ def wemakeprice_crawling():
                 time.sleep(2)
                 result = driver.page_source
                 soup = BeautifulSoup(result, "html.parser")
-            box = soup.find("div", {"class": "search_box_imagedeal"})
+            box = soup.find("div", {"data-container": "dealResult"}).find("div", {
+                "class": "search_box_listwrap"}).find("div", {"class": "search_box_imagedeal"})
             links = box.find_all("a")
             for link in links:
                 sub_url = f"https:{link['href']}"

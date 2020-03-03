@@ -4,6 +4,6 @@ from elevenst import evelenst_crawling as get_elevenst
 from kmugstore import kmugstore_crawling as get_kmugstore
 
 get_kmugstore()
-get_wemakeprice()
 get_auction()
 get_elevenst()
+get_wemakeprice()
