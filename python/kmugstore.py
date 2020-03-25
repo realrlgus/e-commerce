@@ -42,10 +42,23 @@ def kmugstore_crawling():
                         keyword = title.split("-")[-1].strip()
                     else:
                         continue
+
+                default_price_span = sub_soup.find("span", {"id": "consumer"})
+
+                if default_price_span is not None:
+                    default_price = default_price_span.get_text(
+                        strip=True).replace(",", "")
+                else:
+                    default_price = 0
                 price = int(sub_soup.find("span", {"id": "price"}).get_text(
                     strip=True).replace(",", ""))
-                fee = sub_soup.find(
-                    "td", {"style": "font-size:15px; font-weight:normal;"}).get_text(strip=True)
+                fee_html = sub_soup.find(
+                    "td", {"style": "font-size:15px; font-weight:normal;"})
+
+                if fee_html is not None:
+                    fee = fee_html.get_text(strip=True)
+                else:
+                    fee = 0
 
                 if fee == "무료배송":
                     fee = 0
@@ -65,6 +78,7 @@ def kmugstore_crawling():
                                 INSERT INTO kmugstore_data
                                 SET productName = '{title}',
                                 keyword = '{keyword}',
+                                default_price = {default_price},
                                 price = {price},
                                 fee = {fee},
                                 imgurl = '{image_url}',

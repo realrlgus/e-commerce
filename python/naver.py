@@ -41,15 +41,15 @@ def naverstore_crawling():
             now = time.strftime("%Y-%m-%d %H:%M:%S",
                                 time.localtime(time.time()))
             insert_query = f"""
-                                INSERT INTO ecommerce_data
+                                INSERT INTO crawling_data
                                 SET productName = '{title}',
                                 keyword = '{keyword}',
                                 price = {price},
                                 fee = {fee},
+                                category = '{category}',
                                 productUrl = '{productUrl}',
                                 crawlingTime = '{now}',
-                                crawlingSite = '{mall_title}',
-                                saler = '{mall_title}'
+                                crawlingSite = '{mall_title}'
                                 """
             sql.query(insert_query)
 
