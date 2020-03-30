@@ -6,10 +6,11 @@ from naver import naverstore_crawling as get_naverstore
 from ashop import ashopstore_crawling as get_ashopstore
 from frisbee import frisbeestore_crawling as get_frisbeestore
 
-# get_frisbeestore()
-# get_ashopstore()
-# get_naverstore()
 get_kmugstore()
+get_frisbeestore()
+get_ashopstore()
+get_naverstore()
+
 # get_auction()
 # get_elevenst()
 # get_wemakeprice()
